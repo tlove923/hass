@@ -1084,7 +1084,7 @@ function activitySummary(entities) {
   return parts.length ? parts.join(" · ") : "All off"
 }
 
-// Settings browser buckets. No "Cameras" until cameras ship.
+// Settings browser buckets.
 var DOMAIN_FILTERS = [
   { id: "all", title: "All", domains: [] },
   { id: "lights", title: "Lights", domains: ["light"] },
@@ -1093,6 +1093,7 @@ var DOMAIN_FILTERS = [
   { id: "climate", title: "Climate", domains: ["climate"] },
   { id: "media", title: "Media", domains: ["media_player"] },
   { id: "covers", title: "Covers", domains: ["cover"] },
+  { id: "cameras", title: "Cameras", domains: ["camera"] },
   { id: "sensors", title: "Sensors", domains: ["sensor", "binary_sensor"] }
 ]
 
