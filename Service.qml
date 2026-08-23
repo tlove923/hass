@@ -137,7 +137,10 @@ QtObject {
       showEntityIcons: root.showEntityIcons,
       selectedTab: root.activeTab,
       displayNameOverrides: root.displayNameOverrides,
-      iconOverrides: root.iconOverrides
+      iconOverrides: root.iconOverrides,
+      doorbellRingEntity: root.doorbellRingEntity,
+      doorbellNotify: root.doorbellNotify,
+      doorbellAutoOpen: root.doorbellAutoOpen
     }
   }
 
