@@ -78,12 +78,13 @@ QtObject {
   property string temperatureUnit: ""
 
   // ---- camera + doorbell (home-integration extras) ----
-  // The Reolink front-porch doorbell reports a "visitor" while someone is at
-  // the door; the off→on edge is the ring. Surfaces once per ring as a
-  // desktop notification plus a flag the panel watches to open the doorbell
-  // camera.
-  readonly property string doorbellRingEntity: "binary_sensor.front_porch_front_door_visitor"
-  readonly property string doorbellCamera: "camera.doorbell"
+  // Any binary sensor can be the doorbell ring, configured in config.json as
+  // `doorbellRingEntity` (empty disables the feature). The off→on edge is the
+  // ring, surfaced as a desktop notification (doorbellNotify) and a flag the
+  // panel watches to open the cameras (doorbellAutoOpen).
+  property string doorbellRingEntity: ""
+  property bool doorbellNotify: true
+  property bool doorbellAutoOpen: true
   property bool doorbellRang: false
   property string doorbellPrevState: ""
   property int doorbellLastRingAt: 0
@@ -359,6 +360,9 @@ QtObject {
     root.groupByArea = config.groupByArea
     root.showEntityIcons = config.showEntityIcons
     root.activeTab = config.selectedTab
+    root.doorbellRingEntity = config.doorbellRingEntity
+    root.doorbellNotify = config.doorbellNotify
+    root.doorbellAutoOpen = config.doorbellAutoOpen
 
     root.configured = root.demoMode || root.baseUrl.length > 0
     rebuildSortedIds()
@@ -867,14 +871,15 @@ QtObject {
       root.refreshRow(entity.entity_id)
     }
 
-    // Doorbell ring: the visitor sensor is "on" while someone is at the door,
-    // so catch the off→on edge and surface it once (not every poll).
-    if (entity.entity_id === root.doorbellRingEntity) {
+    // Doorbell ring: catch the off→on edge of the configured ring sensor once
+    // (not every poll) and surface it. Nothing happens when no ring entity is
+    // configured, so non-doorbell setups are unaffected.
+    if (root.doorbellRingEntity && entity.entity_id === root.doorbellRingEntity) {
       var doorState = String(entity.state || "")
       if (doorState === "on" && root.doorbellPrevState !== "on") {
         root.doorbellRang = true
         root.doorbellLastRingAt = Date.now()
-        root.notifyText("Doorbell", "Someone rang the door")
+        if (root.doorbellNotify) root.notifyText("Doorbell", "Someone rang the door")
       }
       root.doorbellPrevState = doorState
       if (doorState === "on") root.doorbellResetTimer.restart()

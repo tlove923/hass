@@ -102,6 +102,27 @@ that your home network is trustworthy — without the network-name check, a
 laptop that later joins some other Wi-Fi with something answering on that
 same address would send it your token.
 
+## Cameras and doorbell
+
+Camera entities you star in the device picker render as **live snapshot tiles**
+instead of plain rows: the signed `entity_picture` URL Home Assistant provides
+is fetched with `curl` to a local file and refreshed every few seconds, so any
+camera integration works (Frigate, Reolink, generic, …).
+
+The doorbell ring is optional and configured in `config.json`:
+
+| key | default | meaning |
+|---|---|---|
+| `doorbellRingEntity` | *(empty)* | Binary sensor whose **off→on** edge marks a ring. Empty disables the feature. |
+| `doorbellNotify` | `true` | Fire a desktop notification (`notify-send`) on a ring. |
+| `doorbellAutoOpen` | `true` | Open the panel to the cameras on a ring. |
+
+```json
+"doorbellRingEntity": "binary_sensor.front_door_visitor",
+"doorbellNotify": true,
+"doorbellAutoOpen": true
+```
+
 ## Debugging
 
 ```bash

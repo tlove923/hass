@@ -3,7 +3,8 @@
 var KEYS = [
   "baseUrl", "localUrl", "trustedNetwork", "demoMode", "favorites",
   "demoFavorites", "groupByArea", "showEntityIcons", "selectedTab",
-  "displayNameOverrides", "iconOverrides"
+  "displayNameOverrides", "iconOverrides",
+  "doorbellRingEntity", "doorbellNotify", "doorbellAutoOpen"
 ]
 
 function stringList(value, fallback) {
@@ -65,7 +66,13 @@ function parse(text, demoDefaults) {
       selectedTab: typeof raw.selectedTab === "string" && raw.selectedTab
         ? raw.selectedTab : "favorites",
       displayNameOverrides: plainMap(raw.displayNameOverrides),
-      iconOverrides: plainMap(raw.iconOverrides)
+      iconOverrides: plainMap(raw.iconOverrides),
+      // Doorbell ring. Empty entity id = feature off. The sensor's off→on
+      // edge is the ring; see Service.qml.
+      doorbellRingEntity: typeof raw.doorbellRingEntity === "string"
+        ? raw.doorbellRingEntity : "",
+      doorbellNotify: raw.doorbellNotify !== false,
+      doorbellAutoOpen: raw.doorbellAutoOpen !== false
     }
   }
 }

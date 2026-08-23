@@ -68,9 +68,12 @@ Panel {
     onTriggered: root.recomputeCameraTiles()
   }
 
-  // Doorbell ring: a desktop notification fires from the service; the panel
-  // opens to the cameras so the doorbell feed is front and centre.
-  onDoorbellRingChanged: if (root.doorbellRing && !root.opened) root.open()
+  // Doorbell ring: a desktop notification fires from the service; when
+  // doorbellAutoOpen is set the panel opens to the cameras so the doorbell
+  // feed is front and centre.
+  onDoorbellRingChanged: if (root.doorbellRing
+      && root.serviceReady && root.hass.doorbellAutoOpen
+      && !root.opened) root.open()
 
   onOpenedChanged: {
     if (!opened) {
