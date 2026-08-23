@@ -77,6 +77,41 @@ QtObject {
   // unit of their own, so without this every temperature renders bare.
   property string temperatureUnit: ""
 
+  // ---- camera + doorbell (home-integration extras) ----
+  // The Reolink front-porch doorbell reports a "visitor" while someone is at
+  // the door; the off→on edge is the ring. Surfaces once per ring as a
+  // desktop notification plus a flag the panel watches to open the doorbell
+  // camera.
+  readonly property string doorbellRingEntity: "binary_sensor.front_porch_front_door_visitor"
+  readonly property string doorbellCamera: "camera.doorbell"
+  property bool doorbellRang: false
+  property string doorbellPrevState: ""
+  property int doorbellLastRingAt: 0
+
+  // Absolute camera snapshot URL (HA's signed entity_picture), or "".
+  function cameraPicture(entityId) {
+    var entity = root.states[entityId]
+    if (!entity) return ""
+    var picture = Model.attrs(entity).entity_picture
+    if (!picture) return ""
+    return String(root.baseUrl).replace(/\/+$/, "") + picture
+  }
+
+  property Process notifyProcess: Process { id: notifyProc }
+
+  function notifyText(title, body) {
+    if (notifyProc.running) return
+    notifyProc.command = ["notify-send", "--app-name=Home Assistant",
+                          "--icon=video-webcam", String(title), String(body)]
+    notifyProc.running = true
+  }
+
+  // QtObject has no default property, so the timer is a declared property.
+  property Timer doorbellResetTimer: Timer {
+    interval: 8000
+    onTriggered: root.doorbellRang = false
+  }
+
   // ------------------------------------------------------------ config
 
   property FileView configFile: FileView {
@@ -810,6 +845,10 @@ QtObject {
     root.stateRevision++
     root.rebuildSortedIds()
     root.rebuildRows()
+    // Seed the doorbell edge with the snapshot so an already-"on" visitor
+    // sensor at connect (someone at the door) does not fire a fresh ring.
+    var ring = root.states[root.doorbellRingEntity]
+    root.doorbellPrevState = ring ? String(ring.state || "") : ""
   }
 
   function applyStateChanged(entity) {
@@ -826,6 +865,19 @@ QtObject {
       root.rebuildRows()
     } else {
       root.refreshRow(entity.entity_id)
+    }
+
+    // Doorbell ring: the visitor sensor is "on" while someone is at the door,
+    // so catch the off→on edge and surface it once (not every poll).
+    if (entity.entity_id === root.doorbellRingEntity) {
+      var doorState = String(entity.state || "")
+      if (doorState === "on" && root.doorbellPrevState !== "on") {
+        root.doorbellRang = true
+        root.doorbellLastRingAt = Date.now()
+        root.notifyText("Doorbell", "Someone rang the door")
+      }
+      root.doorbellPrevState = doorState
+      if (doorState === "on") root.doorbellResetTimer.restart()
     }
   }
 
@@ -1001,6 +1053,8 @@ QtObject {
 
     rows.clear()
     for (var i = 0; i < entityIds.length; i++) {
+      // Cameras render as snapshot tiles in the panel, not device rows.
+      if (Model.domainOf(entityIds[i]) === "camera") continue
       rows.append(rowFor(entityIds[i]))
     }
     root.recomputeExpandable()

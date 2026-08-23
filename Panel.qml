@@ -31,11 +31,56 @@ Panel {
   readonly property bool hasDevices: serviceReady && hass.hasDevices
   readonly property var tabs: serviceReady ? hass.tabs : []
 
-  onOpenedChanged: if (!opened) {
-    expandedEntityId = ""
-    cursorActive = false
-    cursorIndex = 0
-    expandedControlCursorIndex = -1
+  // ---- camera tiles ----
+  property var cameraTiles: []
+  readonly property bool doorbellRing: serviceReady && hass.doorbellRang
+  readonly property bool ringBanner: root.doorbellRing
+      && (Date.now() - (root.serviceReady ? root.hass.doorbellLastRingAt : 0)) < 6000
+
+  function recomputeCameraTiles() {
+    var out = []
+    if (root.serviceReady) {
+      var faves = root.hass.favorites || []
+      for (var i = 0; i < faves.length; i++) {
+        var id = faves[i]
+        if (Model.domainOf(id) !== "camera") continue
+        var entity = root.hass.states[id]
+        if (!entity) continue
+        var picture = Model.attrs(entity).entity_picture
+        if (!picture) continue
+        out.push({
+          id: id,
+          name: root.hass.displayName(id),
+          source: String(root.hass.baseUrl).replace(/\/+$/, "") + picture
+        })
+      }
+    }
+    root.cameraTiles = out
+  }
+
+  // Each tile refreshes its own frame; this timer only re-reads the signed
+  // picture URLs (they rotate) while the panel is open.
+  Timer {
+    id: cameraTimer
+    interval: 30000
+    running: root.opened
+    repeat: true
+    onTriggered: root.recomputeCameraTiles()
+  }
+
+  // Doorbell ring: a desktop notification fires from the service; the panel
+  // opens to the cameras so the doorbell feed is front and centre.
+  onDoorbellRingChanged: if (root.doorbellRing && !root.opened) root.open()
+
+  onOpenedChanged: {
+    if (!opened) {
+      expandedEntityId = ""
+      cursorActive = false
+      cursorIndex = 0
+      expandedControlCursorIndex = -1
+    } else {
+      root.recomputeCameraTiles()
+    }
   }
 
   function moveCursor(delta) {
@@ -186,6 +231,8 @@ Panel {
         + " demo=" + root.hass.demoMode
         + " entities=" + Object.keys(root.hass.states).length
         + " rows=" + root.hass.rows.count
+        + " cameras=" + root.cameraTiles.length
+        + " ring=" + root.doorbellRing
         + (root.hass.lastError ? " error=" + root.hass.lastError : "")
     }
 
@@ -323,6 +370,38 @@ Panel {
         }
 
         PanelSeparator { width: parent.width; foreground: root.fg }
+
+        // ---------- cameras ----------
+        Column {
+          width: parent.width
+          visible: root.cameraTiles.length > 0
+          spacing: Style.spacing.sm
+
+          PanelSectionHeader {
+            width: parent.width
+            text: root.ringBanner ? "CAMERAS · DOORBELL RANG" : "CAMERAS"
+            foreground: root.ringBanner ? Color.urgent : root.fg
+            fontFamily: root.family
+          }
+
+          Flow {
+            width: parent.width
+            spacing: Style.spacing.sm
+
+            Repeater {
+              model: root.cameraTiles
+              delegate: CameraTile {
+                width: (parent.width - Style.spacing.sm) / 2
+                entityId: modelData.id
+                pictureUrl: modelData.source
+                label: modelData.name
+                refreshMs: 3000
+                fontFamily: root.family
+                foreground: root.fg
+              }
+            }
+          }
+        }
 
         // ---------- area tabs ----------
         // ButtonGroup is a Row and does not wrap, so it scrolls instead of
